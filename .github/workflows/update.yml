@@ -1,43 +1,24 @@
-name: Build Subscription
+- name: Download subconverter
+  run: |
+    wget https://github.com/tindy2013/subconverter/releases/latest/download/subconverter_linux64.tar.gz
+    tar -xzf subconverter_linux64.tar.gz
+    cd subconverter
+    chmod +x subconverter
 
-on:
-  workflow_dispatch:
-  schedule:
-    - cron: "0 */6 * * *"
+- name: Prepare links
+  run: |
+    mkdir -p subconverter/output
+    LINKS=$(paste -sd "|" sources.txt)
+    echo "[custom]" > subconverter/pref.ini
+    echo "path=output" >> subconverter/pref.ini
+    echo "url=$LINKS" >> subconverter/pref.ini
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+- name: Convert
+  run: |
+    cd subconverter
+    ./subconverter -g
 
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Download subconverter
-        run: |
-          wget https://github.com/tindy2013/subconverter/releases/latest/download/subconverter_linux64.tar.gz
-          tar -xzf subconverter_linux64.tar.gz
-          chmod +x subconverter
-
-      - name: Prepare links
-        run: |
-          mkdir -p output
-          LINKS=$(paste -sd "|" sources.txt)
-          echo "[custom]" > pref.ini
-          echo "path=output" >> pref.ini
-          echo "url=$LINKS" >> pref.ini
-
-      - name: Convert
-        run: |
-          ./subconverter -g
-
-      - name: Save as sub.txt
-        run: |
-          mv output/* output/sub.txt || true
-
-      - name: Commit
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
-          git add .
-          git commit -m "Update sub" || echo "No changes"
-          git push
+- name: Move result
+  run: |
+    mkdir -p output
+    cp subconverter/output/* output/sub.txt || true

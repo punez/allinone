@@ -1,4 +1,4 @@
-name: Update Subscription
+name: Build Subscription
 
 on:
   workflow_dispatch:
@@ -10,29 +10,34 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: Download subconverter binary
+      - name: Download subconverter
         run: |
           wget https://github.com/tindy2013/subconverter/releases/latest/download/subconverter_linux64.tar.gz
           tar -xzf subconverter_linux64.tar.gz
           chmod +x subconverter
 
-      - name: Create config
+      - name: Prepare links
         run: |
+          mkdir -p output
+          LINKS=$(paste -sd "|" sources.txt)
           echo "[custom]" > pref.ini
           echo "path=output" >> pref.ini
-          echo "url=https://example1.com/sub|https://example2.com/sub" >> pref.ini
+          echo "url=$LINKS" >> pref.ini
 
-      - name: Run subconverter
+      - name: Convert
         run: |
           ./subconverter -g
 
-      - name: Commit output
+      - name: Save as sub.txt
+        run: |
+          mv output/* output/sub.txt || true
+
+      - name: Commit
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
           git add .
-          git commit -m "Update subscription" || echo "No changes"
+          git commit -m "Update sub" || echo "No changes"
           git push
